@@ -1,0 +1,78 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module",
+    "project": false
+  },
+  "plugins": [
+    "@typescript-eslint",
+    "security",
+    "@angular-eslint"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:security/recommended-legacy"
+  ],
+  "ignorePatterns": [
+    "node_modules/**",
+    "dist/**",
+    "**/*.spec.ts",
+    "**/*.min.js"
+  ],
+  "rules": {
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+
+    "security/detect-object-injection": "warn",
+    "security/detect-non-literal-regexp": "warn",
+    "security/detect-unsafe-regex": "error",
+    "security/detect-non-literal-fs-filename": "warn",
+    "security/detect-possible-timing-attacks": "warn",
+
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-unused-vars": "warn",
+    "@typescript-eslint/no-non-null-assertion": "warn",
+
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "document",
+        "property": "write",
+        "message": "document.write is unsafe. Avoid direct DOM writes."
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "CallExpression[callee.property.name='bypassSecurityTrustHtml']",
+        "message": "bypassSecurityTrustHtml disables Angular's XSS sanitizer. Confirm the input cannot contain user-supplied content (common misuse when binding Syncfusion RichTextEditor / DialogComponent content)."
+      },
+      {
+        "selector": "CallExpression[callee.property.name='bypassSecurityTrustResourceUrl']",
+        "message": "bypassSecurityTrustResourceUrl disables Angular's URL sanitizer. Verify the URL source is trusted, not user input."
+      },
+      {
+        "selector": "CallExpression[callee.property.name='bypassSecurityTrustScript']",
+        "message": "bypassSecurityTrustScript disables Angular's script sanitizer. High-risk if input is not fully trusted/static."
+      },
+      {
+        "selector": "AssignmentExpression[left.property.name='innerHTML']",
+        "message": "Direct innerHTML assignment can introduce XSS. Prefer Angular property binding with sanitization, or DomSanitizer with explicit review."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["*.html"],
+      "parser": "@angular-eslint/template-parser",
+      "plugins": ["@angular-eslint/template"],
+      "rules": {
+        "@angular-eslint/template/no-any": "warn"
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+# Bandit configuration for Python services
+# Docs: https://bandit.readthedocs.io/en/latest/config.html
+
+exclude_dirs:
+  - "/tests"
+  - "/test"
+  - "/venv"
+  - "/.venv"
+  - "/migrations"
+  - "/node_modules"
+  - "/dist"
+  - "/build"
+
+# Skip low-value / high-noise checks; keep everything security-relevant enabled.
+# B101: assert_used - noisy if project uses asserts for internal invariants, not security boundaries.
+skips:
+  - B101
+
+# Explicitly keep these HIGH-VALUE checks front and center (documented for team awareness,
+# bandit runs them by default - listed here so nobody accidentally adds them to `skips` later):
+#   B105/B106/B107 - hardcoded passwords/secrets
+#   B301-B302       - insecure pickle/marshal deserialization
+#   B303/B304/B305  - weak/broken crypto (MD5, DES, insecure ciphers)
+#   B310/B311       - insecure URL open, weak random for security purposes
+#   B608             - SQL injection via string-based query construction (relevant for
+#                      any Python service talking to MS SQL / raw SQL execution)

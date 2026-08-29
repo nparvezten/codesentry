@@ -1,0 +1,120 @@
+rules:
+  # ---------- EF Core / MS SQL ----------
+
+  - id: efcore-raw-sql-string-interpolation
+    languages: [csharp]
+    severity: ERROR
+    message: >
+      FromSqlRaw/ExecuteSqlRaw with string interpolation or concatenation is
+      SQL injection. Use FromSqlInterpolated / ExecuteSqlInterpolated (EF Core
+      parameterizes these automatically), or pass SqlParameter objects.
+    patterns:
+      - pattern-either:
+          - pattern: $CTX.Database.ExecuteSqlRaw($SQL)
+          - pattern: $CTX.Database.ExecuteSqlRawAsync($SQL)
+          - pattern: $CTX.$SET.FromSqlRaw($SQL)
+      - metavariable-pattern:
+          metavariable: $SQL
+          patterns:
+            - pattern-either:
+                - pattern: $"..."
+                - pattern: $A + $B
+
+  - id: dotnet-sqlcommand-string-concat
+    languages: [csharp]
+    severity: ERROR
+    message: >
+      Building a SqlCommand/SqlDataAdapter query with string concatenation or
+      interpolation is SQL injection. Use parameterized queries
+      (command.Parameters.Add / AddWithValue).
+    patterns:
+      - pattern-either:
+          - pattern: new SqlCommand($SQL, ...)
+          - pattern: new SqlDataAdapter($SQL, ...)
+      - metavariable-pattern:
+          metavariable: $SQL
+          patterns:
+            - pattern-either:
+                - pattern: $"..."
+                - pattern: $A + $B
+
+  - id: dotnet-hardcoded-connection-string
+    languages: [csharp]
+    severity: WARNING
+    message: >
+      Hardcoded SQL Server connection string in source. Move to
+      appsettings.json / environment variables / a secrets manager, and
+      make sure this file isn't committed with real credentials.
+    patterns:
+      - pattern-regex: '(?i)(Server|Data Source)\s*=\s*[^;"]+;.*(Password|Pwd)\s*=\s*[^;"]+'
+
+  - id: dotnet-weak-crypto
+    languages: [csharp]
+    severity: WARNING
+    message: >
+      MD5/SHA1/DES are weak for security-sensitive use (password hashing,
+      tokens, signatures). Use SHA256+ or a proper password hashing
+      algorithm (PBKDF2/BCrypt/Argon2) for credentials.
+    patterns:
+      - pattern-either:
+          - pattern: MD5.Create()
+          - pattern: SHA1.Create()
+          - pattern: new DESCryptoServiceProvider(...)
+
+  # ---------- Angular / TypeScript / Syncfusion ----------
+
+  - id: angular-bypass-security-trust
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      DomSanitizer bypass methods disable Angular's built-in XSS protection.
+      This is a common pattern when binding rich content into Syncfusion
+      components (RichTextEditor, DialogComponent, Grid custom cell
+      templates). Confirm the value is never derived from user input, or
+      sanitize explicitly before this call.
+    patterns:
+      - pattern-either:
+          - pattern: $SANITIZER.bypassSecurityTrustHtml(...)
+          - pattern: $SANITIZER.bypassSecurityTrustScript(...)
+          - pattern: $SANITIZER.bypassSecurityTrustStyle(...)
+          - pattern: $SANITIZER.bypassSecurityTrustUrl(...)
+          - pattern: $SANITIZER.bypassSecurityTrustResourceUrl(...)
+
+  - id: angular-direct-innerhtml-assignment
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Direct innerHTML assignment bypasses Angular template sanitization.
+      Prefer [innerHTML] property binding (which Angular sanitizes by
+      default) or DomSanitizer with explicit, reviewed use.
+    patterns:
+      - pattern: $EL.nativeElement.innerHTML = $VAL
+      - pattern-not: $EL.nativeElement.innerHTML = ""
+
+  - id: syncfusion-unsanitized-template-binding
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Passing raw/unsanitized string data into a Syncfusion component's
+      content or template property (e.g. RichTextEditor value, Dialog
+      content, Grid template) can lead to stored/DOM XSS if the string
+      originates from user input or an API response. Sanitize before
+      assigning, or confirm the source is trusted.
+    patterns:
+      - pattern-either:
+          - pattern: this.$FIELD.value = $VAL
+          - pattern: $DIALOG.content = $VAL
+      - metavariable-regex:
+          metavariable: $FIELD
+          regex: (?i)(richtexteditor|editor|htmlcontent)
+
+  # ---------- General secrets-adjacent (defense in depth alongside gitleaks) ----------
+
+  - id: hardcoded-api-key-or-secret
+    languages: [csharp, typescript, javascript, python]
+    severity: WARNING
+    message: >
+      Possible hardcoded API key / secret / token. Move to configuration,
+      environment variables, or a secrets manager.
+    patterns:
+      - pattern-regex: '(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*["''][A-Za-z0-9+/_\-]{16,}["'']'

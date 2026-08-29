@@ -1,0 +1,15 @@
+{
+  "name": "codesentry",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local SAST + code review toolkit config and dependencies (not a runtime app).",
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "eslint-plugin-security": "^3.0.0",
+    "@angular-eslint/eslint-plugin": "^17.0.0",
+    "@angular-eslint/template-parser": "^17.0.0",
+    "@angular-eslint/eslint-plugin-template": "^17.0.0"
+  }
+}
