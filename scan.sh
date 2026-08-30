@@ -42,6 +42,10 @@ if command -v semgrep >/dev/null 2>&1; then
           --config auto \
           "$TARGET_DIR" \
           --output "$REPORT_DIR/semgrep.txt" || true
+  semgrep --config "$TOOLKIT_DIR/configs/semgrep-rules.yml" \
+          --config auto \
+          "$TARGET_DIR" \
+          --json --output "$REPORT_DIR/semgrep.json" || true
   echo "  -> saved to $REPORT_DIR/semgrep.txt"
 else
   echo "semgrep not installed, skipping."
@@ -57,6 +61,12 @@ if [ -f "$ESLINT_BIN" ]; then
       --ext .ts,.html \
       --no-error-on-unmatched-pattern \
       "$TARGET_DIR" > "$REPORT_DIR/eslint.txt" 2>&1 || true
+  "$ESLINT_BIN" --config "$TOOLKIT_DIR/configs/.eslintrc.json" \
+      --resolve-plugins-relative-to "$TOOLKIT_DIR" \
+      --ext .ts,.html \
+      --no-error-on-unmatched-pattern \
+      --format json \
+      "$TARGET_DIR" > "$REPORT_DIR/eslint.json" 2>/dev/null || true
   echo "  -> saved to $REPORT_DIR/eslint.txt"
 else
   echo "ESLint not set up in toolkit yet. Run: cd $TOOLKIT_DIR && npm install"
@@ -67,6 +77,7 @@ echo ""
 echo "== [4/6] Bandit (Python) =="
 if command -v bandit >/dev/null 2>&1; then
   bandit -r "$TARGET_DIR" -c "$TOOLKIT_DIR/configs/bandit.yaml" -f txt -o "$REPORT_DIR/bandit.txt" || true
+  bandit -r "$TARGET_DIR" -c "$TOOLKIT_DIR/configs/bandit.yaml" -f json -o "$REPORT_DIR/bandit.json" || true
   echo "  -> saved to $REPORT_DIR/bandit.txt"
 else
   echo "bandit not installed, skipping."
@@ -92,9 +103,34 @@ else
   echo "dotnet not installed, skipping."
 fi
 
+# --- Pick up baseline (accepted findings) from target project, if present ---
+if [ -f "$TARGET_DIR/.codesentry-baseline.json" ]; then
+  cp "$TARGET_DIR/.codesentry-baseline.json" "$REPORT_DIR/baseline.json"
+  echo ""
+  echo "Baseline found in target project — accepted findings will be suppressed in the report."
+fi
+
+# --- Build HTML report for developer handoff ---
+echo ""
+echo "== Generating HTML report =="
+if command -v python3 >/dev/null 2>&1; then
+  python3 "$TOOLKIT_DIR/generate_report.py" "$REPORT_DIR" "$PROJECT_NAME" || true
+fi
+
 echo ""
 echo "=========================================="
 echo " Scan complete."
 echo " All reports saved in:"
 echo " $REPORT_DIR"
+if [ -f "$REPORT_DIR/report.html" ]; then
+  echo ""
+  echo " Open the report:"
+  echo " open \"$REPORT_DIR/report.html\""
+fi
+if [ ! -f "$TARGET_DIR/.codesentry-baseline.json" ]; then
+  echo ""
+  echo " First time scanning this project? Accept current findings as baseline so"
+  echo " future scans only show NEW issues:"
+  echo " python3 \"$TOOLKIT_DIR/accept_baseline.py\" \"$REPORT_DIR\" \"$TARGET_DIR\""
+fi
 echo "=========================================="
